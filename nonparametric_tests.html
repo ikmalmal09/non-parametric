@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Non-Parametric Hypothesis Tests</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green-dark: #085041;
+    --green-mid:  #0F6E56;
+    --green-light:#E1F5EE;
+    --amber-dark: #633806;
+    --amber-mid:  #EF9F27;
+    --amber-light:#FAEEDA;
+    --blue-dark:  #0C447C;
+    --blue-light: #E6F1FB;
+    --bg:         #f4f6f5;
+    --surface:    #ffffff;
+    --border:     #d8e0dd;
+    --text:       #1a2e28;
+    --muted:      #5a7269;
+    --mono:       'IBM Plex Mono', monospace;
+    --sans:       'IBM Plex Sans', sans-serif;
+    --radius:     10px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* Layout */
+  .shell { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 220px; min-width: 220px; background: #0d2620;
+    display: flex; flex-direction: column; padding: 0;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  .sidebar-brand {
+    padding: 22px 20px 18px; border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .sidebar-brand h1 { font-size: 14px; font-weight: 600; color: #fff; line-height: 1.4; }
+  .sidebar-brand p  { font-size: 11px; color: #7fb5a5; margin-top: 3px; }
+  .nav-section { padding: 14px 0 6px 20px; font-size: 10px; font-weight: 600;
+    color: #4a7a6d; letter-spacing: 0.08em; text-transform: uppercase; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px; cursor: pointer; color: #9ec8bc;
+    font-size: 13px; font-weight: 400; border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+  .nav-item.active { background: rgba(15,110,86,0.25); color: #fff;
+    border-left-color: var(--green-mid); font-weight: 500; }
+  .nav-icon { width: 16px; text-align: center; font-size: 14px; }
+
+  .main { flex: 1; padding: 28px 32px; overflow-x: hidden; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Page header */
+  .page-header { margin-bottom: 22px; }
+  .page-header h2 { font-size: 20px; font-weight: 600; color: var(--text); }
+  .page-header p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .equiv-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--blue-light); color: var(--blue-dark);
+    font-size: 11px; font-weight: 500; padding: 3px 10px;
+    border-radius: 20px; margin-top: 8px;
+  }
+
+  /* Grid */
+  .grid2 { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
+  @media(max-width:820px){ .grid2 { grid-template-columns: 1fr; } }
+
+  /* Cards */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px;
+  }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+
+  /* Form elements */
+  .field { margin-bottom: 13px; }
+  .field label { display: block; font-size: 12px; font-weight: 500;
+    color: var(--muted); margin-bottom: 5px; }
+  .field textarea, .field input, .field select {
+    width: 100%; font-family: var(--sans); font-size: 13px;
+    padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px;
+    background: #f9fbfa; color: var(--text); outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field textarea { font-family: var(--mono); resize: vertical; height: 68px; font-size: 12px; }
+  .field textarea:focus, .field input:focus, .field select:focus {
+    border-color: var(--green-mid); box-shadow: 0 0 0 3px rgba(15,110,86,0.1);
+    background: #fff;
+  }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* Button */
+  .btn-run {
+    width: 100%; padding: 10px; font-family: var(--sans); font-size: 13px;
+    font-weight: 600; background: var(--green-mid); color: #fff;
+    border: none; border-radius: 8px; cursor: pointer; letter-spacing: 0.02em;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-run:hover  { background: var(--green-dark); }
+  .btn-run:active { transform: scale(0.98); }
+
+  /* Metrics row */
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .metric {
+    background: #f4f9f7; border: 1px solid #cce4da;
+    border-radius: 8px; padding: 10px 12px; text-align: center;
+  }
+  .metric-label { font-size: 10px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .metric-value { font-size: 20px; font-weight: 600; color: var(--text); font-family: var(--mono); }
+
+  /* Verdict */
+  .verdict {
+    border-radius: 8px; padding: 11px 15px; font-size: 13px;
+    font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .verdict.reject { background: var(--green-light); color: var(--green-dark); border-left: 4px solid var(--green-mid); }
+  .verdict.fail   { background: var(--amber-light); color: var(--amber-dark); border-left: 4px solid var(--amber-mid); }
+
+  /* Steps */
+  .steps { background: #f9faf9; border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+  .steps-title { font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .steps ol { padding-left: 18px; }
+  .steps ol li { font-size: 13px; color: var(--text); margin-bottom: 6px; line-height: 1.6; }
+  .steps ol li code {
+    font-family: var(--mono); font-size: 12px; background: #fff;
+    padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border);
+  }
+
+  /* R code */
+  .rcode {
+    background: #0d2620; color: #7ee8c8; font-family: var(--mono);
+    font-size: 12px; border-radius: 8px; padding: 12px 15px;
+    white-space: pre-wrap; line-height: 1.7; position: relative;
+  }
+  .rcode-label {
+    font-size: 10px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
+  }
+  .copy-btn {
+    position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.1);
+    color: #7ee8c8; border: 1px solid rgba(255,255,255,0.15); border-radius: 5px;
+    font-size: 11px; padding: 3px 8px; cursor: pointer; font-family: var(--sans);
+    transition: background 0.15s;
+  }
+  .copy-btn:hover { background: rgba(255,255,255,0.2); }
+
+  /* Table */
+  .tbl-wrap { overflow-x: auto; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    font-size: 10px; font-weight: 600; color: var(--muted); text-align: left;
+    padding: 6px 10px; border-bottom: 2px solid var(--border);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  tbody td { padding: 6px 10px; font-family: var(--mono); color: var(--text); }
+  tbody tr:nth-child(even) td { background: #f4f9f7; }
+
+  /* Guide */
+  .guide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width:700px){ .guide-grid { grid-template-columns: 1fr; } }
+  .guide-card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px; }
+  .guide-card h3 { font-size: 14px; font-weight: 600; color: var(--green-mid); margin-bottom: 8px; }
+  .guide-card p  { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+  .badge {
+    font-size: 11px; font-weight: 500; padding: 3px 10px;
+    border-radius: 20px; display: inline-block;
+  }
+  .badge-g { background: var(--green-light); color: var(--green-dark); }
+  .badge-a { background: var(--amber-light); color: var(--amber-dark); }
+  .badge-b { background: var(--blue-light);  color: var(--blue-dark);  }
+  .decision-list { list-style: none; padding: 0; }
+  .decision-list li { font-size: 13px; color: var(--text); padding: 5px 0;
+    border-bottom: 1px solid var(--border); display: flex; gap: 8px; }
+  .decision-list li:last-child { border-bottom: none; }
+  .decision-list li span { color: var(--green-mid); font-weight: 600; min-width: 22px; }
+
+  /* Plot placeholder / canvas */
+  .plot-area { background: #f4f9f7; border: 1px solid #cce4da; border-radius: 8px;
+    margin-bottom: 14px; padding: 8px; }
+
+  /* Responsive sidebar toggle for small screens */
+  @media(max-width:600px){
+    .sidebar { width: 60px; min-width: 60px; }
+    .sidebar-brand h1, .sidebar-brand p, .nav-item span, .nav-section { display: none; }
+    .nav-item { justify-content: center; padding: 12px; }
+    .main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <h1>Non-Parametric Tests</h1>
+      <p>Rank-based hypothesis testing</p>
+    </div>
+    <div class="nav-section">Tests</div>
+    <div class="nav-item active" onclick="show('sign',this)">
+      <span class="nav-icon">±</span><span>Sign Test</span>
+    </div>
+    <div class="nav-item" onclick="show('wsr',this)">
+      <span class="nav-icon">↕</span><span>Wilcoxon Signed-Rank</span>
+    </div>
+    <div class="nav-item" onclick="show('mw',this)">
+      <span class="nav-icon">≠</span><span>Mann-Whitney U</span>
+    </div>
+    <div class="nav-item" onclick="show('kw',this)">
+      <span class="nav-icon">≡</span><span>Kruskal-Wallis</span>
+    </div>
+    <div class="nav-item" onclick="show('sp',this)">
+      <span class="nav-icon">ρ</span><span>Spearman ρ</span>
+    </div>
+    <div class="nav-section">Reference</div>
+    <div class="nav-item" onclick="show('guide',this)">
+      <span class="nav-icon">?</span><span>When to Use?</span>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="main">
+
+    <!-- SIGN TEST -->
+    <div id="page-sign" class="page active">
+      <div class="page-header">
+        <h2>Sign Test</h2>
+        <p>Tests whether the median of a population equals a hypothesised value.</p>
+        <span class="equiv-badge">≈ One-sample z-test (for median)</span>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">Input</div>
+          <div class="field"><label>Sample data (comma-separated)</label>
+            <textarea id="sign-data">12, 15, 9, 18, 14, 10, 16, 11, 13, 8</textarea></div>
+          <div class="field"><label>Hypothesised median (M₀)</label>
+            <input type="number" id="sign-m0" value="12" step="any"></div>
+          <div class="field"><label>Alternative hypothesis</label>
+            <select id="sign-alt">
+              <option value="two">Two-tailed  (M ≠ M₀)</option>
+              <option value="greater">Right-tailed (M > M₀)</option>
+              <option value="less">Left-tailed  (M < M₀)</option>
+            </select></div>
+          <div class="field"><label>Significance level α</label>
+            <select id="sign-alpha">
+              <option value="0.05">0.05</option>
+              <option value="0.01">0.01</option>
+              <option value="0.10">0.10</option>
+            </select></div>
+          <button class="btn-run" onclick="runSign()">Run Sign Test</button>
+        </div>
+        <div id="sign-result"></div>
+      </div>
+    </div>
+
+    <!-- WILCOXON SIGNED-RANK -->
+    <div id="page-wsr" class="page">
+      <div class="page-header">
+        <h2>Wilcoxon Signed-Rank Test</h2>
+        <p>Compares a sample median to a value, or tests paired differences.</p>
+        <span class="equiv-badge">≈ One-sample / Paired t-test</span>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">Input</div>
+          <div class="field"><label>Sample / Before values</label>
+            <textarea id="wsr-x">12, 15, 9, 18, 14, 10, 16, 11</textarea></div>
+          <div class="field"><label>After / Paired values</label>
+            <textarea id="wsr-y">14, 14, 11, 19, 13, 12, 18, 10</textarea>
+            <div class="hint">Leave blank for one-sample test against μ₀</div></div>
+          <div class="field"><label>Hypothesised median / difference (μ₀)</label>
+            <input type="number" id="wsr-m0" value="0" step="any"></div>
+          <div class="field"><label>Alternative hypothesis</label>
+            <select id="wsr-alt">
+              <option value="two">Two-tailed</option>
+              <option value="greater">Right-tailed</option>
+              <option value="less">Left-tailed</option>
+            </select></div>
+          <div class="field"><label>Significance level α</label>
+            <select id="wsr-alpha">
+              <option value="0.05">0.05</option>
+              <option value="0.01">0.01</option>
+              <option value="0.10">0.10</option>
+            </select></div>
+          <button class="btn-run" onclick="runWSR()">Run Wilcoxon Signed-Rank</button>
+        </div>
+        <div id="wsr-result"></div>
+      </div>
+    </div>
+
+    <!-- MANN-WHITNEY -->
+    <div id="page-mw" class="page">
+      <div class="page-header">
+        <h2>Mann-Whitney U Test</h2>
+        <p>Compares the rank distributions of two independent groups.</p>
+        <span class="equiv-badge">≈ Independent two-sample t-test</span>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">Input</div>
+          <div class="field"><label>Group 1 data</label>
+            <textarea id="mw-g1">23, 25, 28, 30, 31, 27</textarea></div>
+          <div class="field"><label>Group 2 data</label>
+            <textarea id="mw-g2">18, 20, 22, 24, 26, 19</textarea></div>
+          <div class="field"><label>Alternative hypothesis</label>
+            <select id="mw-alt">
+              <option value="two">Two-tailed</option>
+              <option value="greater">Group 1 > Group 2</option>
+              <option value="less">Group 1 &lt; Group 2</option>
+            </select></div>
+          <div class="field"><label>Significance level α</label>
+            <select id="mw-alpha">
+              <option value="0.05">0.05</option>
+              <option value="0.01">0.01</option>
+              <option value="0.10">0.10</option>
+            </select></div>
+          <button class="btn-run" onclick="runMW()">Run Mann-Whitney U</button>
+        </div>
+        <div id="mw-result"></div>
+      </div>
+    </div>
+
+    <!-- KRUSKAL-WALLIS -->
+    <div id="page-kw" class="page">
+      <div class="page-header">
+        <h2>Kruskal-Wallis Test</h2>
+        <p>Tests whether three or more independent groups come from the same distribution.</p>
+        <span class="equiv-badge">≈ One-way ANOVA</span>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">Input</div>
+          <div class="field"><label>Group 1</label><textarea id="kw-g1">12, 15, 18, 14</textarea></div>
+          <div class="field"><label>Group 2</label><textarea id="kw-g2">20, 22, 25, 21</textarea></div>
+          <div class="field"><label>Group 3</label><textarea id="kw-g3">8, 10, 11, 9</textarea></div>
+          <div class="field"><label>Group 4 <span style="font-weight:400">(optional)</span></label>
+            <textarea id="kw-g4" placeholder="leave blank to skip"></textarea></div>
+          <div class="field"><label>Significance level α</label>
+            <select id="kw-alpha">
+              <option value="0.05">0.05</option>
+              <option value="0.01">0.01</option>
+              <option value="0.10">0.10</option>
+            </select></div>
+          <button class="btn-run" onclick="runKW()">Run Kruskal-Wallis</button>
+        </div>
+        <div id="kw-result"></div>
+      </div>
+    </div>
+
+    <!-- SPEARMAN -->
+    <div id="page-sp" class="page">
+      <div class="page-header">
+        <h2>Spearman Rank Correlation</h2>
+        <p>Measures the strength and direction of a monotonic relationship.</p>
+        <span class="equiv-badge">≈ Pearson correlation</span>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">Input</div>
+          <div class="field"><label>Variable X</label>
+            <textarea id="sp-x">3.5, 4.1, 2.9, 5.0, 3.8, 4.5, 2.2, 4.8</textarea></div>
+          <div class="field"><label>Variable Y</label>
+            <textarea id="sp-y">72, 85, 60, 91, 78, 88, 55, 90</textarea></div>
+          <div class="field"><label>Alternative hypothesis</label>
+            <select id="sp-alt">
+              <option value="two">Two-tailed (ρ ≠ 0)</option>
+              <option value="greater">ρ > 0</option>
+              <option value="less">ρ &lt; 0</option>
+            </select></div>
+          <div class="field"><label>Significance level α</label>
+            <select id="sp-alpha">
+              <option value="0.05">0.05</option>
+              <option value="0.01">0.01</option>
+              <option value="0.10">0.10</option>
+            </select></div>
+          <button class="btn-run" onclick="runSpearman()">Run Spearman ρ</button>
+        </div>
+        <div id="sp-result"></div>
+      </div>
+    </div>
+
+    <!-- GUIDE -->
+    <div id="page-guide" class="page">
+      <div class="page-header">
+        <h2>When to Use Each Test?</h2>
+        <p>Quick reference guide for choosing the right non-parametric test.</p>
+      </div>
+      <div class="guide-grid">
+        <div class="guide-card">
+          <h3>Sign Test</h3>
+          <p>Use when you want to test a median against a value and only the <em>direction</em> of deviation matters. Robust but low power.</p>
+          <div class="badges">
+            <span class="badge badge-g">One sample</span>
+            <span class="badge badge-a">Ordinal OK</span>
+            <span class="badge badge-b">Minimal assumptions</span>
+          </div>
+          <div class="rcode">binom.test(n_plus, n, p=0.5)</div>
+        </div>
+        <div class="guide-card">
+          <h3>Wilcoxon Signed-Rank</h3>
+          <p>Use when data are continuous and symmetric, for one-sample or paired before/after designs. More powerful than the sign test.</p>
+          <div class="badges">
+            <span class="badge badge-g">One sample / Paired</span>
+            <span class="badge badge-a">Symmetric dist.</span>
+          </div>
+          <div class="rcode">wilcox.test(x, mu=0)
+wilcox.test(before, after, paired=TRUE)</div>
+        </div>
+        <div class="guide-card">
+          <h3>Mann-Whitney U</h3>
+          <p>Use to compare two independent groups without assuming normality. Tests whether one group tends to have larger values than the other.</p>
+          <div class="badges">
+            <span class="badge badge-g">Two independent groups</span>
+            <span class="badge badge-b">No normality needed</span>
+          </div>
+          <div class="rcode">wilcox.test(g1, g2, paired=FALSE)</div>
+        </div>
+        <div class="guide-card">
+          <h3>Kruskal-Wallis</h3>
+          <p>Use for three or more independent groups. If significant, follow with Dunn's post-hoc test to identify which pairs differ.</p>
+          <div class="badges">
+            <span class="badge badge-g">3+ groups</span>
+            <span class="badge badge-a">Independent</span>
+            <span class="badge badge-b">Post-hoc: Dunn's</span>
+          </div>
+          <div class="rcode">kruskal.test(list(g1, g2, g3))</div>
+        </div>
+        <div class="guide-card">
+          <h3>Spearman ρ</h3>
+          <p>Use when the relationship between two variables is monotonic but not necessarily linear, or when data contain outliers.</p>
+          <div class="badges">
+            <span class="badge badge-g">Correlation</span>
+            <span class="badge badge-a">Monotonic</span>
+            <span class="badge badge-b">Outlier-robust</span>
+          </div>
+          <div class="rcode">cor.test(x, y, method="spearman")</div>
+        </div>
+        <div class="guide-card">
+          <h3>Quick Decision Guide</h3>
+          <ul class="decision-list">
+            <li><span>→</span>One sample vs. median? Sign test or Wilcoxon signed-rank</li>
+            <li><span>→</span>Two independent groups? Mann-Whitney U</li>
+            <li><span>→</span>Three or more groups? Kruskal-Wallis</li>
+            <li><span>→</span>Paired / repeated measures? Wilcoxon signed-rank</li>
+            <li><span>→</span>Monotonic association? Spearman ρ</li>
+            <li><span>→</span>Unsure of normality? Use any of the above</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ── Navigation ──────────────────────────────────────────────
+function show(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── Utilities ───────────────────────────────────────────────
+function parseNums(str) {
+  return str.split(/[\s,\n]+/).map(s => parseFloat(s.trim())).filter(v => !isNaN(v));
+}
+function rankArr(arr) {
+  const sorted = [...arr].map((v,i) => ({v,i})).sort((a,b) => a.v - b.v);
+  const ranks = new Array(arr.length);
+  let i = 0;
+  while (i < sorted.length) {
+    let j = i;
+    while (j < sorted.length - 1 && sorted[j+1].v === sorted[j].v) j++;
+    const avg = (i + j) / 2 + 1;
+    for (let k = i; k <= j; k++) ranks[sorted[k].i] = avg;
+    i = j + 1;
+  }
+  return ranks;
+}
+function normalCDF(z) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const poly = t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));
+  const p = 1 - 0.3989422803 * Math.exp(-0.5*z*z) * poly;
+  return z >= 0 ? p : 1 - p;
+}
+function lgamma(z) {
+  const c = [76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+  let y = z, tmp = z + 5.5; tmp -= (z + 0.5) * Math.log(tmp);
+  let ser = 1.000000000190015;
+  for (let j = 0; j < 6; j++) ser += c[j] / ++y;
+  return -tmp + Math.log(2.5066282746310005 * ser / z);
+}
+function regGamma(a, x) {
+  if (x <= 0) return 0;
+  let sum = 1/a, term = 1/a;
+  for (let i = 1; i < 200; i++) { term *= x/(a+i); sum += term; if (term < 1e-10) break; }
+  return 1 - Math.exp(-x + a*Math.log(x) - lgamma(a)) * sum;
+}
+function chiCDF(x, df) { return x <= 0 ? 0 : regGamma(df/2, x/2); }
+function regBeta(a, b, x) {
+  if (x <= 0) return 0; if (x >= 1) return 1;
+  const lb = lgamma(a) + lgamma(b) - lgamma(a+b);
+  const front = Math.exp(Math.log(x)*a + Math.log(1-x)*b - lb) / a;
+  let c = 1, d = 1-((a+b)*x/(a+1));
+  if (Math.abs(d) < 1e-30) d = 1e-30; d = 1/d; let h = d;
+  for (let m = 1; m <= 100; m++) {
+    let mn = m*m, num = (m*(b-m)*x)/((a+2*m-1)*(a+2*m));
+    d = 1+num*d; if(Math.abs(d)<1e-30)d=1e-30;
+    c = 1+num/c; if(Math.abs(c)<1e-30)c=1e-30;
+    d = 1/d; h *= d*c;
+    num = (-(a+m)*(a+b+m)*x)/((a+2*m)*(a+2*m+1));
+    d=1+num*d; if(Math.abs(d)<1e-30)d=1e-30;
+    c=1+num/c; if(Math.abs(c)<1e-30)c=1e-30;
+    d=1/d; const delta=d*c; h*=delta; if(Math.abs(delta-1)<1e-10)break;
+  }
+  return front*h;
+}
+function tCDF(t, df) {
+  const x = df/(df+t*t), ib = regBeta(df/2, 0.5, x);
+  return t > 0 ? 1-ib/2 : ib/2;
+}
+function binomPMF(k,n,p){ return Math.exp(lgamma(n+1)-lgamma(k+1)-lgamma(n-k+1)+k*Math.log(p)+(n-k)*Math.log(1-p)); }
+function binomCDF(k,n,p){ let s=0; for(let i=0;i<=k;i++) s+=binomPMF(i,n,p); return s; }
+function binomPVal(k,n,p,alt){
+  if(alt==='greater') return 1-binomCDF(k-1,n,p);
+  if(alt==='less')    return binomCDF(k,n,p);
+  const pm = binomPMF(k,n,p); let pv=0;
+  for(let i=0;i<=n;i++) if(binomPMF(i,n,p)<=pm+1e-10) pv+=binomPMF(i,n,p);
+  return Math.min(1,pv);
+}
+
+// ── Render helpers ──────────────────────────────────────────
+function metricHTML(items) {
+  return `<div class="metrics">${items.map(m=>`
+    <div class="metric">
+      <div class="metric-label">${m.l}</div>
+      <div class="metric-value">${m.v}</div>
+    </div>`).join('')}</div>`;
+}
+function verdictHTML(reject, msg) {
+  return `<div class="verdict ${reject?'reject':'fail'}">
+    ${reject ? '✓ Reject H₀' : '✗ Fail to reject H₀'} — ${msg}</div>`;
+}
+function stepsHTML(steps) {
+  return `<div class="steps">
+    <div class="steps-title">Step-by-step solution</div>
+    <ol>${steps.map(s=>`<li>${s}</li>`).join('')}</ol></div>`;
+}
+function rcodeHTML(id, code) {
+  return `<div class="rcode-label">R Code</div>
+    <div class="rcode" id="rc-${id}">${code}
+      <button class="copy-btn" onclick="copyCode('rc-${id}')">Copy</button>
+    </div>`;
+}
+function tableHTML(cols, rows) {
+  return `<div class="tbl-wrap"><table>
+    <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table></div>`;
+}
+function copyCode(id) {
+  const el = document.getElementById(id);
+  const text = el.innerText.replace('Copy','').trim();
+  navigator.clipboard.writeText(text);
+  el.querySelector('.copy-btn').textContent = 'Copied!';
+  setTimeout(() => el.querySelector('.copy-btn').textContent = 'Copy', 2000);
+}
+
+// ── SIGN TEST ───────────────────────────────────────────────
+function runSign() {
+  const data  = parseNums(document.getElementById('sign-data').value);
+  const m0    = parseFloat(document.getElementById('sign-m0').value);
+  const alt   = document.getElementById('sign-alt').value;
+  const alpha = parseFloat(document.getElementById('sign-alpha').value);
+  if (data.length < 4) { alert('Enter at least 4 observations.'); return; }
+
+  const diffs = data.map(x => x - m0);
+  const np = diffs.filter(d=>d>0).length;
+  const nm = diffs.filter(d=>d<0).length;
+  const nt = diffs.filter(d=>d===0).length;
+  const n  = np + nm;
+  const pv = binomPVal(np, n, 0.5, alt);
+  const rj = pv < alpha;
+
+  document.getElementById('sign-result').innerHTML =
+    metricHTML([{l:'n (excl. ties)',v:n},{l:'n⁺',v:np},{l:'n⁻',v:nm},
+                {l:'Ties',v:nt},{l:'p-value',v:pv.toFixed(4)},{l:'α',v:alpha}]) +
+    verdictHTML(rj, rj ? `significant at α = ${alpha}` : `not significant at α = ${alpha}`) +
+    stepsHTML([
+      `H₀: median = <code>${m0}</code>`,
+      `Compute signs of (xᵢ − M₀). Remove ${nt} tie(s). Effective n = <code>${n}</code>`,
+      `n⁺ = <code>${np}</code>,  n⁻ = <code>${nm}</code>`,
+      `Under H₀: n⁺ ~ Binomial(n = ${n}, p = 0.5)`,
+      `p-value (${alt}) = <code>${pv.toFixed(4)}</code>`,
+      `Decision: p = ${pv.toFixed(4)} ${rj?'<':'≥'} α = ${alpha} → <strong>${rj?'Reject H₀':'Fail to reject H₀'}</strong>`
+    ]) +
+    rcodeHTML('sign', `# Sign test in R\nx <- c(${data.join(', ')})\nbinom.test(sum(x > ${m0}), sum(x != ${m0}), p = 0.5,\n           alternative = "${alt==='two'?'two.sided':alt}")\n# Or with BSDA:\n# SIGN.test(x, md = ${m0})`);
+}
+
+// ── WILCOXON SIGNED-RANK ────────────────────────────────────
+function runWSR() {
+  const x     = parseNums(document.getElementById('wsr-x').value);
+  const yraw  = document.getElementById('wsr-y').value.trim();
+  const m0    = parseFloat(document.getElementById('wsr-m0').value) || 0;
+  const alt   = document.getElementById('wsr-alt').value;
+  const alpha = parseFloat(document.getElementById('wsr-alpha').value);
+  if (x.length < 4) { alert('Enter at least 4 values.'); return; }
+
+  const paired = yraw.length > 0;
+  let diffs;
+  if (paired) {
+    const y = parseNums(yraw);
+    if (y.length !== x.length) { alert('Before and after must be the same length.'); return; }
+    diffs = x.map((xi,i) => xi - y[i] - m0);
+  } else { diffs = x.map(xi => xi - m0); }
+
+  const nz   = diffs.filter(d => d !== 0);
+  const n    = nz.length;
+  const absd = nz.map(d => Math.abs(d));
+  const rnks = rankArr(absd);
+  const Wp   = nz.reduce((s,d,i) => d>0 ? s+rnks[i] : s, 0);
+  const Wm   = nz.reduce((s,d,i) => d<0 ? s+rnks[i] : s, 0);
+  const mu   = n*(n+1)/4;
+  const sig  = Math.sqrt(n*(n+1)*(2*n+1)/24);
+  const z    = (Math.min(Wp,Wm) - mu) / sig;
+  let pv;
+  if (alt==='two')     pv = 2*Math.min(normalCDF(z), 1-normalCDF(z));
+  else if(alt==='greater') pv = 1 - normalCDF((Wp-mu)/sig);
+  else                 pv = normalCDF((Wm-mu)/sig);
+  pv = Math.max(0, Math.min(1, pv));
+  const rj = pv < alpha;
+
+  const trows = nz.slice(0,10).map((d,i)=>[i+1, d.toFixed(2), absd[i].toFixed(2), rnks[i].toFixed(1), d>0?'+':'−']);
+
+  document.getElementById('wsr-result').innerHTML =
+    metricHTML([{l:'n (non-zero)',v:n},{l:'W⁺',v:Wp.toFixed(1)},{l:'W⁻',v:Wm.toFixed(1)},
+                {l:'z (approx)',v:z.toFixed(3)},{l:'p-value',v:pv.toFixed(4)},{l:'α',v:alpha}]) +
+    verdictHTML(rj, rj ? `significant at α = ${alpha}` : `not significant at α = ${alpha}`) +
+    tableHTML(['#','dᵢ','|dᵢ|','Rank','Sign'], trows) +
+    stepsHTML([
+      paired ? `Compute dᵢ = xᵢ − yᵢ − ${m0}` : `Compute dᵢ = xᵢ − ${m0}`,
+      `Remove zero differences. Effective n = <code>${n}</code>`,
+      `Rank |dᵢ| from 1 to n (average ties), restore signs`,
+      `W⁺ = <code>${Wp.toFixed(1)}</code>,  W⁻ = <code>${Wm.toFixed(1)}</code>`,
+      `Normal approx: μ = ${mu.toFixed(1)}, σ = ${sig.toFixed(2)} → z = <code>${z.toFixed(3)}</code>`,
+      `p-value (${alt}) = <code>${pv.toFixed(4)}</code>`,
+      `Decision: <strong>${rj?'Reject H₀':'Fail to reject H₀'}</strong>`
+    ]) +
+    rcodeHTML('wsr', paired
+      ? `# Wilcoxon signed-rank (paired) in R\nbefore <- c(${x.join(', ')})\nafter  <- c(${parseNums(yraw).join(', ')})\nwilcox.test(before, after, paired = TRUE,\n            alternative = "${alt==='two'?'two.sided':alt}")`
+      : `# Wilcoxon signed-rank (one-sample) in R\nx <- c(${x.join(', ')})\nwilcox.test(x, mu = ${m0},\n            alternative = "${alt==='two'?'two.sided':alt}")`);
+}
+
+// ── MANN-WHITNEY ────────────────────────────────────────────
+let mwChart = null;
+function runMW() {
+  const g1    = parseNums(document.getElementById('mw-g1').value);
+  const g2    = parseNums(document.getElementById('mw-g2').value);
+  const alt   = document.getElementById('mw-alt').value;
+  const alpha = parseFloat(document.getElementById('mw-alpha').value);
+  if (g1.length<3||g2.length<3) { alert('Each group needs at least 3 values.'); return; }
+
+  const n1=g1.length, n2=g2.length, N=n1+n2;
+  const combined = [...g1.map(v=>({v,g:1})),...g2.map(v=>({v,g:2}))].sort((a,b)=>a.v-b.v);
+  let i=0;
+  while(i<combined.length){
+    let j=i;
+    while(j<combined.length-1&&combined[j+1].v===combined[j].v)j++;
+    const avg=(i+j)/2+1;
+    for(let k=i;k<=j;k++)combined[k].rank=avg;
+    i=j+1;
+  }
+  const R1=combined.filter(x=>x.g===1).reduce((s,x)=>s+x.rank,0);
+  const U1=R1-n1*(n1+1)/2, U2=n1*n2-U1;
+  const mu=n1*n2/2, sig=Math.sqrt(n1*n2*(N+1)/12);
+  const z=(Math.min(U1,U2)-mu)/sig;
+  let pv;
+  if(alt==='two')      pv=2*Math.min(normalCDF(z),1-normalCDF(z));
+  else if(alt==='greater') pv=1-normalCDF((U1-mu)/sig);
+  else                 pv=normalCDF((U2-mu)/sig);
+  pv=Math.max(0,Math.min(1,pv));
+  const rj=pv<alpha;
+  const rEff=(Math.abs(z)/Math.sqrt(N)).toFixed(3);
+
+  document.getElementById('mw-result').innerHTML =
+    metricHTML([{l:'n₁',v:n1},{l:'n₂',v:n2},{l:'U₁',v:U1.toFixed(1)},
+                {l:'U₂',v:U2.toFixed(1)},{l:'p-value',v:pv.toFixed(4)},{l:'Effect r',v:rEff}]) +
+    verdictHTML(rj, rj ? `significant at α = ${alpha}` : `not significant at α = ${alpha}`) +
+    `<div class="plot-area"><canvas id="mw-canvas" height="180"></canvas></div>` +
+    stepsHTML([
+      `Combine N = ${N} values and assign ranks (average ties)`,
+      `R₁ (sum of ranks, group 1) = <code>${R1.toFixed(1)}</code>`,
+      `U₁ = R₁ − n₁(n₁+1)/2 = <code>${U1.toFixed(1)}</code>`,
+      `U₂ = n₁n₂ − U₁ = <code>${U2.toFixed(1)}</code>`,
+      `Normal approx: z = (U − μ)/σ = <code>${z.toFixed(3)}</code>`,
+      `Effect size r = |z|/√N = <code>${rEff}</code>  (small<0.1, medium<0.3, large≥0.5)`,
+      `p-value (${alt}) = <code>${pv.toFixed(4)}</code>`,
+      `Decision: <strong>${rj?'Reject H₀':'Fail to reject H₀'}</strong>`
+    ]) +
+    rcodeHTML('mw', `# Mann-Whitney U test in R\ng1 <- c(${g1.join(', ')})\ng2 <- c(${g2.join(', ')})\nwilcox.test(g1, g2, paired = FALSE,\n            alternative = "${alt==='two'?'two.sided':alt}")\n# Effect size: r = ${rEff}`);
+
+  // Draw boxplot using Chart.js
+  if (mwChart) { mwChart.destroy(); mwChart = null; }
+  const ctx = document.getElementById('mw-canvas').getContext('2d');
+  const bpData = (arr, label, color) => {
+    const sorted = [...arr].sort((a,b)=>a-b);
+    const q1 = sorted[Math.floor(sorted.length*0.25)];
+    const med = sorted[Math.floor(sorted.length*0.5)];
+    const q3 = sorted[Math.floor(sorted.length*0.75)];
+    return { label, data: arr.map((v,i)=>({x:label,y:v})), backgroundColor: color+'33', borderColor: color, borderWidth:2 };
+  };
+  mwChart = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        { label:'Group 1', data: g1.map(v=>({x:'Group 1',y:v})), backgroundColor:'#0F6E5688', borderColor:'#0F6E56', pointRadius:6, pointHoverRadius:8 },
+        { label:'Group 2', data: g2.map(v=>({x:'Group 2',y:v})), backgroundColor:'#EF9F2788', borderColor:'#EF9F27', pointRadius:6, pointHoverRadius:8 }
+      ]
+    },
+    options: {
+      responsive:true, plugins:{legend:{position:'top',labels:{font:{family:'IBM Plex Sans',size:12}}}},
+      scales: { x:{type:'category',labels:['Group 1','Group 2']}, y:{beginAtZero:false} }
+    }
+  });
+}
+
+// ── KRUSKAL-WALLIS ──────────────────────────────────────────
+let kwChart = null;
+function runKW() {
+  const groups = [
+    parseNums(document.getElementById('kw-g1').value),
+    parseNums(document.getElementById('kw-g2').value),
+    parseNums(document.getElementById('kw-g3').value),
+  ];
+  const g4r = document.getElementById('kw-g4').value.trim();
+  if (g4r) groups.push(parseNums(g4r));
+  const alpha = parseFloat(document.getElementById('kw-alpha').value);
+  const k = groups.length;
+  for (let i=0;i<k;i++) if(groups[i].length<2){alert(`Group ${i+1} needs ≥2 values.`);return;}
+
+  const ni = groups.map(g=>g.length);
+  const N  = ni.reduce((s,n)=>s+n,0);
+  const all = groups.flatMap((g,gi)=>g.map(v=>({v,g:gi}))).sort((a,b)=>a.v-b.v);
+  let i=0;
+  while(i<all.length){
+    let j=i;
+    while(j<all.length-1&&all[j+1].v===all[j].v)j++;
+    const avg=(i+j)/2+1;
+    for(let m=i;m<=j;m++)all[m].rank=avg;
+    i=j+1;
+  }
+  const Ri = groups.map((_,gi)=>all.filter(x=>x.g===gi).reduce((s,x)=>s+x.rank,0));
+  const H  = (12/(N*(N+1)))*Ri.reduce((s,r,gi)=>s+(r*r/ni[gi]),0)-3*(N+1);
+  const df = k-1;
+  const pv = 1 - chiCDF(H, df);
+  const rj = pv < alpha;
+
+  const colors = ['#0F6E56','#EF9F27','#185FA5','#A32D2D'];
+
+  document.getElementById('kw-result').innerHTML =
+    metricHTML([{l:'k (groups)',v:k},{l:'N',v:N},{l:'H statistic',v:H.toFixed(3)},
+                {l:'df',v:df},{l:'p-value',v:pv.toFixed(4)},{l:'α',v:alpha}]) +
+    verdictHTML(rj, rj ? `significant at α = ${alpha} — run Dunn's post-hoc` : `not significant at α = ${alpha}`) +
+    `<div class="plot-area"><canvas id="kw-canvas" height="180"></canvas></div>` +
+    stepsHTML([
+      `Combine all N = ${N} observations and rank 1 to ${N}`,
+      ...Ri.map((r,gi)=>`Group ${gi+1}: nᵢ = ${ni[gi]}, Rᵢ = <code>${r.toFixed(1)}</code>`),
+      `H = [12/(N(N+1))] × Σ(Rᵢ²/nᵢ) − 3(N+1) = <code>${H.toFixed(3)}</code>`,
+      `Under H₀: H ~ χ²(df = k − 1 = <code>${df}</code>)`,
+      `p-value = <code>${pv.toFixed(4)}</code>`,
+      `Decision: <strong>${rj?'Reject H₀ — groups differ':'Fail to reject H₀'}</strong>`,
+      rj ? 'Post-hoc: Use Dunn\'s test to identify differing pairs.' : 'No post-hoc analysis needed.'
+    ]) +
+    rcodeHTML('kw',
+      groups.map((g,i)=>`g${i+1} <- c(${g.join(', ')})`).join('\n') +
+      `\nkruskal.test(list(${groups.map((_,i)=>'g'+(i+1)).join(', ')}))\n\n# Post-hoc (if significant):\n# install.packages("dunn.test")\n# dunn.test::dunn.test(c(${groups.map((_,i)=>'g'+(i+1)).join(', ')}),\n#   g = rep(1:${k}, c(${ni.join(', ')})))`
+    );
+
+  if (kwChart) { kwChart.destroy(); kwChart = null; }
+  const ctx = document.getElementById('kw-canvas').getContext('2d');
+  kwChart = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: groups.map((g,i)=>({
+        label: `Group ${i+1}`,
+        data: g.map(v=>({x:`Group ${i+1}`,y:v})),
+        backgroundColor: colors[i]+'88', borderColor: colors[i], pointRadius:6
+      }))
+    },
+    options: {
+      responsive:true, plugins:{legend:{position:'top',labels:{font:{family:'IBM Plex Sans',size:12}}}},
+      scales:{ x:{type:'category',labels:groups.map((_,i)=>`Group ${i+1}`)}, y:{beginAtZero:false} }
+    }
+  });
+}
+
+// ── SPEARMAN ────────────────────────────────────────────────
+let spChart = null;
+function runSpearman() {
+  const x     = parseNums(document.getElementById('sp-x').value);
+  const y     = parseNums(document.getElementById('sp-y').value);
+  const alt   = document.getElementById('sp-alt').value;
+  const alpha = parseFloat(document.getElementById('sp-alpha').value);
+  if (x.length!==y.length||x.length<4){ alert('X and Y must be equal length (≥ 4).'); return; }
+
+  const n  = x.length;
+  const rx = rankArr(x), ry = rankArr(y);
+  const d  = rx.map((r,i)=>r-ry[i]);
+  const d2 = d.reduce((s,di)=>s+di*di,0);
+  const rho = 1 - 6*d2/(n*(n*n-1));
+  const t_sp = rho * Math.sqrt((n-2)/(1-rho*rho));
+  let pv;
+  if (alt==='two')     pv = 2*(1-tCDF(Math.abs(t_sp),n-2));
+  else if(alt==='greater') pv = 1-tCDF(t_sp,n-2);
+  else                 pv = tCDF(t_sp,n-2);
+  pv = Math.max(0,Math.min(1,pv));
+  const rj = pv < alpha;
+  const str = Math.abs(rho)<0.2?'negligible':Math.abs(rho)<0.4?'weak':Math.abs(rho)<0.6?'moderate':Math.abs(rho)<0.8?'strong':'very strong';
+  const dir = rho>=0?'positive':'negative';
+
+  const trows = x.slice(0,10).map((_,i)=>[i+1, x[i].toFixed(2), y[i].toFixed(2),
+    rx[i].toFixed(1), ry[i].toFixed(1), d[i].toFixed(2), (d[i]*d[i]).toFixed(2)]);
+
+  document.getElementById('sp-result').innerHTML =
+    metricHTML([{l:'n',v:n},{l:'Σd²',v:d2.toFixed(2)},{l:'ρ (rs)',v:rho.toFixed(4)},
+                {l:'t statistic',v:t_sp.toFixed(3)},{l:'df',v:n-2},{l:'p-value',v:pv.toFixed(4)}]) +
+    verdictHTML(rj, rj ? `${str} ${dir} correlation significant at α = ${alpha}` : `no significant correlation at α = ${alpha}`) +
+    `<div class="plot-area"><canvas id="sp-canvas" height="200"></canvas></div>` +
+    tableHTML(['#','X','Y','rank(X)','rank(Y)','dᵢ','dᵢ²'], trows) +
+    stepsHTML([
+      `Rank X values and Y values separately (average ties)`,
+      `Compute dᵢ = rank(X)ᵢ − rank(Y)ᵢ for each pair`,
+      `Σd² = <code>${d2.toFixed(2)}</code>`,
+      `ρₛ = 1 − 6Σd²/[n(n²−1)] = 1 − ${(6*d2).toFixed(2)}/${n*(n*n-1)} = <code>${rho.toFixed(4)}</code>`,
+      `Interpretation: <strong>${str} ${dir}</strong> monotonic relationship`,
+      `Test H₀: ρ = 0. t = ρ√[(n−2)/(1−ρ²)] = <code>${t_sp.toFixed(3)}</code> ~ t(df = ${n-2})`,
+      `p-value (${alt}) = <code>${pv.toFixed(4)}</code>`,
+      `Decision: <strong>${rj?'Reject H₀':'Fail to reject H₀'}</strong>`
+    ]) +
+    rcodeHTML('sp', `# Spearman rank correlation in R\nx <- c(${x.join(', ')})\ny <- c(${y.join(', ')})\ncor.test(x, y, method = "spearman",\n         alternative = "${alt==='two'?'two.sided':alt}")\n# Quick value:\n# cor(x, y, method = "spearman")  # = ${rho.toFixed(4)}`);
+
+  if (spChart) { spChart.destroy(); spChart = null; }
+  const ctx = document.getElementById('sp-canvas').getContext('2d');
+  // Regression line
+  const mx=x.reduce((s,v)=>s+v,0)/n, my=y.reduce((s,v)=>s+v,0)/n;
+  const slope=x.reduce((s,v,i)=>s+(v-mx)*(y[i]-my),0)/x.reduce((s,v)=>s+(v-mx)**2,0);
+  const intercept=my-slope*mx;
+  const xMin=Math.min(...x),xMax=Math.max(...x);
+  spChart = new Chart(ctx, {
+    data: {
+      datasets: [
+        { type:'scatter', label:'Data points', data: x.map((v,i)=>({x:v,y:y[i]})),
+          backgroundColor:'#0F6E5688', borderColor:'#0F6E56', pointRadius:6 },
+        { type:'line', label:`ρ = ${rho.toFixed(3)}`,
+          data:[{x:xMin,y:slope*xMin+intercept},{x:xMax,y:slope*xMax+intercept}],
+          borderColor:'#EF9F27', borderWidth:2, pointRadius:0, fill:false }
+      ]
+    },
+    options:{
+      responsive:true, plugins:{legend:{position:'top',labels:{font:{family:'IBM Plex Sans',size:12}}}},
+      scales:{ x:{title:{display:true,text:'X'}}, y:{title:{display:true,text:'Y'}} }
+    }
+  });
+}
+</script>
+</body>
+</html>
