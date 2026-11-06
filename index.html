@@ -164,25 +164,6 @@
   tbody td { padding: 6px 10px; font-family: var(--mono); color: var(--text); }
   tbody tr:nth-child(even) td { background: #f4f9f7; }
 
-  /* Guide */
-  .guide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media(max-width:700px){ .guide-grid { grid-template-columns: 1fr; } }
-  .guide-card { background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px 18px; }
-  .guide-card h3 { font-size: 14px; font-weight: 600; color: var(--green-mid); margin-bottom: 8px; }
-  .guide-card p  { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
-  .badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
-  .badge {
-    font-size: 11px; font-weight: 500; padding: 3px 10px;
-    border-radius: 20px; display: inline-block;
-  }
-  .badge-g { background: var(--green-light); color: var(--green-dark); }
-  .badge-a { background: var(--amber-light); color: var(--amber-dark); }
-  .badge-b { background: var(--blue-light);  color: var(--blue-dark);  }
-  .decision-list { list-style: none; padding: 0; }
-  .decision-list li { font-size: 13px; color: var(--text); padding: 5px 0;
-    border-bottom: 1px solid var(--border); display: flex; gap: 8px; }
-  .decision-list li:last-child { border-bottom: none; }
   .decision-list li span { color: var(--green-mid); font-weight: 600; min-width: 22px; }
 
   /* Plot placeholder / canvas */
@@ -223,10 +204,6 @@
     </div>
     <div class="nav-item" onclick="show('sp',this)">
       <span class="nav-icon">ρ</span><span>Spearman ρ</span>
-    </div>
-    <div class="nav-section">Reference</div>
-    <div class="nav-item" onclick="show('guide',this)">
-      <span class="nav-icon">?</span><span>When to Use?</span>
     </div>
   </nav>
 
@@ -391,75 +368,6 @@
       </div>
     </div>
 
-    <!-- GUIDE -->
-    <div id="page-guide" class="page">
-      <div class="page-header">
-        <h2>When to Use Each Test?</h2>
-        <p>Quick reference guide for choosing the right non-parametric test.</p>
-      </div>
-      <div class="guide-grid">
-        <div class="guide-card">
-          <h3>Sign Test</h3>
-          <p>Use when you want to test a median against a value and only the <em>direction</em> of deviation matters. Robust but low power.</p>
-          <div class="badges">
-            <span class="badge badge-g">One sample</span>
-            <span class="badge badge-a">Ordinal OK</span>
-            <span class="badge badge-b">Minimal assumptions</span>
-          </div>
-          <div class="rcode">binom.test(n_plus, n, p=0.5)</div>
-        </div>
-        <div class="guide-card">
-          <h3>Wilcoxon Signed-Rank</h3>
-          <p>Use when data are continuous and symmetric, for one-sample or paired before/after designs. More powerful than the sign test.</p>
-          <div class="badges">
-            <span class="badge badge-g">One sample / Paired</span>
-            <span class="badge badge-a">Symmetric dist.</span>
-          </div>
-          <div class="rcode">wilcox.test(x, mu=0)
-wilcox.test(before, after, paired=TRUE)</div>
-        </div>
-        <div class="guide-card">
-          <h3>Mann-Whitney U</h3>
-          <p>Use to compare two independent groups without assuming normality. Tests whether one group tends to have larger values than the other.</p>
-          <div class="badges">
-            <span class="badge badge-g">Two independent groups</span>
-            <span class="badge badge-b">No normality needed</span>
-          </div>
-          <div class="rcode">wilcox.test(g1, g2, paired=FALSE)</div>
-        </div>
-        <div class="guide-card">
-          <h3>Kruskal-Wallis</h3>
-          <p>Use for three or more independent groups. If significant, follow with Dunn's post-hoc test to identify which pairs differ.</p>
-          <div class="badges">
-            <span class="badge badge-g">3+ groups</span>
-            <span class="badge badge-a">Independent</span>
-            <span class="badge badge-b">Post-hoc: Dunn's</span>
-          </div>
-          <div class="rcode">kruskal.test(list(g1, g2, g3))</div>
-        </div>
-        <div class="guide-card">
-          <h3>Spearman ρ</h3>
-          <p>Use when the relationship between two variables is monotonic but not necessarily linear, or when data contain outliers.</p>
-          <div class="badges">
-            <span class="badge badge-g">Correlation</span>
-            <span class="badge badge-a">Monotonic</span>
-            <span class="badge badge-b">Outlier-robust</span>
-          </div>
-          <div class="rcode">cor.test(x, y, method="spearman")</div>
-        </div>
-        <div class="guide-card">
-          <h3>Quick Decision Guide</h3>
-          <ul class="decision-list">
-            <li><span>→</span>One sample vs. median? Sign test or Wilcoxon signed-rank</li>
-            <li><span>→</span>Two independent groups? Mann-Whitney U</li>
-            <li><span>→</span>Three or more groups? Kruskal-Wallis</li>
-            <li><span>→</span>Paired / repeated measures? Wilcoxon signed-rank</li>
-            <li><span>→</span>Monotonic association? Spearman ρ</li>
-            <li><span>→</span>Unsure of normality? Use any of the above</li>
-          </ul>
-        </div>
-      </div>
-    </div>
 
   </main>
 </div>
@@ -504,13 +412,34 @@ function lgamma(z) {
   for (let j = 0; j < 6; j++) ser += c[j] / ++y;
   return -tmp + Math.log(2.5066282746310005 * ser / z);
 }
-function regGamma(a, x) {
+function gammaIncLower(a, x) {
+  // Regularised lower incomplete gamma P(a,x) via series expansion
   if (x <= 0) return 0;
-  let sum = 1/a, term = 1/a;
-  for (let i = 1; i < 200; i++) { term *= x/(a+i); sum += term; if (term < 1e-10) break; }
-  return 1 - Math.exp(-x + a*Math.log(x) - lgamma(a)) * sum;
+  let term = 1/a, sum = term;
+  for (let i = 1; i < 300; i++) { term *= x/(a+i); sum += term; if (term < 1e-12) break; }
+  return Math.exp(-x + a*Math.log(x) - lgamma(a)) * sum;
 }
-function chiCDF(x, df) { return x <= 0 ? 0 : regGamma(df/2, x/2); }
+function gammaIncUpper(a, x) {
+  // Regularised upper incomplete gamma Q(a,x) = 1 - P(a,x)
+  // Use continued fraction for large x (more stable), series for small x
+  if (x <= 0) return 1;
+  if (x < a + 1) return 1 - gammaIncLower(a, x);
+  // Lentz continued fraction for Q(a,x)
+  const fpmin = 1e-30;
+  let b = x + 1 - a, c = 1/fpmin, d = 1/b, h = d;
+  for (let i = 1; i <= 300; i++) {
+    const an = -i*(i-a);
+    b += 2;
+    d = an*d + b; if (Math.abs(d) < fpmin) d = fpmin;
+    c = b + an/c; if (Math.abs(c) < fpmin) c = fpmin;
+    d = 1/d;
+    const del = d*c; h *= del;
+    if (Math.abs(del-1) < 1e-12) break;
+  }
+  return Math.exp(-x + a*Math.log(x) - lgamma(a)) * h;
+}
+// chiSqPValue: P(chi² > H) with df degrees of freedom — matches R's pchisq(H, df, lower.tail=FALSE)
+function chiSqPValue(H, df) { return H <= 0 ? 1 : gammaIncUpper(df/2, H/2); }
 function regBeta(a, b, x) {
   if (x <= 0) return 0; if (x >= 1) return 1;
   const lb = lgamma(a) + lgamma(b) - lgamma(a+b);
@@ -766,7 +695,7 @@ function runKW() {
   const Ri = groups.map((_,gi)=>all.filter(x=>x.g===gi).reduce((s,x)=>s+x.rank,0));
   const H  = (12/(N*(N+1)))*Ri.reduce((s,r,gi)=>s+(r*r/ni[gi]),0)-3*(N+1);
   const df = k-1;
-  const pv = 1 - chiCDF(H, df);
+  const pv = chiSqPValue(H, df);
   const rj = pv < alpha;
 
   const colors = ['#0F6E56','#EF9F27','#185FA5','#A32D2D'];
